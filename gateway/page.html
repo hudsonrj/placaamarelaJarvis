@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>MySoul</title>
+<style>
+  :root {
+    --bg: #f4efe6;
+    --card: #fffaf3;
+    --line: #ddd4c6;
+    --ink: #16130f;
+    --muted: #6f675c;
+    --gold: #8d5a12;
+    --gold-2: #8d5a12;
+    --bad: #8d3b28;
+    --ok: #3f5c32;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(900px 420px at 100% -10%, rgba(196,164,106,.28), transparent 60%),
+      var(--bg);
+    color: var(--ink);
+    font: 18px/1.45 "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 28px 18px 80px; }
+  nav { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 22px; }
+  nav a { color: var(--gold-2); text-decoration: none; }
+  header { display: flex; gap: 16px; align-items: center; margin-bottom: 28px; }
+  .orb {
+    width: 72px; height: 72px; border-radius: 50%; flex: none;
+    background: radial-gradient(circle at 34% 30%, #fff8e8, #e7c27a 42%, #8d5a12 74%, #2a1c10);
+    box-shadow: 0 0 0 10px rgba(226, 177, 90, 0.08);
+  }
+  h1 { font-size: 40px; font-weight: 500; letter-spacing: -0.03em; margin: 0; }
+  .lead { color: var(--muted); margin: 4px 0 0; }
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    margin: 14px 0;
+  }
+  h2 { margin: 0 0 6px; font-size: 22px; font-weight: 500; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .chip b { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  label { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 15px; }
+  input, textarea, select, button {
+    font: inherit;
+    color: var(--ink);
+    background: #fffaf3;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  input, textarea, select { width: 100%; padding: 12px 14px; }
+  textarea { min-height: 76px; resize: vertical; }
+  button {
+    background: #8d5a12;
+    color: #fffaf3;
+    border: 0;
+    padding: 12px 16px;
+    min-height: 46px;
+    cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button.bad { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  article {
+    border-top: 1px solid var(--line);
+    padding: 14px 0;
+  }
+  article:first-of-type { border-top: 0; }
+  .title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .dot { color: var(--muted); }
+  .dot.on { color: var(--ok); }
+  .dot.off { color: var(--bad); }
+  .tools { color: var(--muted); font-size: 15px; margin-top: 4px; }
+  #note { min-height: 1.4em; color: var(--gold-2); }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <nav>
+    <a href="/">Configuração</a>
+    <a href="/agentes">Agentes</a>
+    <a href="/board">Board</a>
+    <a href="/board/agenda">Agenda</a>
+    <a href="/board/saude">Saúde mental</a>
+  </nav>
+  <header>
+    <div class="orb" aria-hidden="true"></div>
+    <div>
+      <h1>MySoul</h1>
+      <p class="lead">Configuração do assistente. O orb na placa ouve e responde.</p>
+    </div>
+  </header>
+  <p id="note" class="muted"></p>
+
+  <section>
+    <h2>Agora</h2>
+    <p id="turn" class="muted">A placa ainda não falou nesta sessão.</p>
+  </section>
+
+  <section>
+    <h2>Áudio</h2>
+    <p class="muted">A voz sai no computador, no Bluetooth e nos aparelhos ligados. O microfone segue esta ordem: Bluetooth, computador, os outros.</p>
+    <div id="audio" class="row"></div>
+    <div class="actions">
+      <button type="button" id="test-sound">Testar som</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>MCP</h2>
+    <p class="muted">Servidores que o assistente pode consultar além dos arquivos do MySoul. Um comando roda neste computador.</p>
+    <div id="list"></div>
+    <form id="form">
+      <input type="hidden" id="sid"/>
+      <label for="name">Nome</label>
+      <input id="name" maxlength="80" placeholder="Arquivos" required/>
+      <label for="transport">Transporte</label>
+      <select id="transport">
+        <option value="stdio">Comando neste computador</option>
+        <option value="http">URL HTTP</option>
+      </select>
+      <div id="stdio-fields">
+        <label for="command">Comando</label>
+        <input id="command" placeholder="npx"/>
+        <label for="args">Argumentos, um por linha</label>
+        <textarea id="args" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;C:\Users\hudsons"></textarea>
+      </div>
+      <div id="http-fields" class="hide">
+        <label for="url">URL</label>
+        <input id="url" placeholder="http://127.0.0.1:3000/mcp"/>
+      </div>
+      <label for="env">Variáveis, uma por linha, CHAVE=valor</label>
+      <textarea id="env" placeholder=""></textarea>
+      <label><input id="enabled" type="checkbox" checked style="width:auto"/> ativo</label>
+      <div class="actions">
+        <button type="submit" id="save">Adicionar</button>
+        <button type="button" class="ghost" id="cancel">Limpar</button>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <h2>Grokbot · orquestrador</h2>
+    <p class="muted">Cole este endereço e o token no agente do Grokbot. Esse agente é o orquestrador: ele fala com o MySoul e com os outros agentes ligados abaixo.</p>
+    <label>Endereço</label>
+    <input id="hook-url" readonly/>
+    <label>Token</label>
+    <input id="hook-token" readonly/>
+    <label>Authorization</label>
+    <input id="hook-auth" readonly/>
+    <div class="actions">
+      <button type="button" id="copy-hook">Copiar endereço e token</button>
+    </div>
+    <div id="hook-urls" class="tools"></div>
+    <h2 style="margin-top:22px">Outros agentes</h2>
+    <p class="muted">O orquestrador chama estes endereços quando o Grokbot manda <code>to</code> com o nome, ou <code>broadcast: true</code>.</p>
+    <div id="agent-list"></div>
+    <label for="agent-name">Nome</label>
+    <input id="agent-name" placeholder="frota"/>
+    <label for="agent-url">Webhook do agente</label>
+    <input id="agent-url" placeholder="https://..."/>
+    <label for="agent-token">Token</label>
+    <input id="agent-token" placeholder="Bearer token desse agente"/>
+    <div class="actions">
+      <button type="button" id="save-agent">Ligar agente</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Modelo</h2>
+    <p id="model" class="muted">…</p>
+  </section>
+</main>
+<script>
+const note = document.querySelector("#note");
+const transport = document.querySelector("#transport");
+
+function say(text) { note.textContent = text || ""; }
+
+transport.addEventListener("change", () => {
+  const http = transport.value === "http";
+  document.querySelector("#stdio-fields").classList.toggle("hide", http);
+  document.querySelector("#http-fields").classList.toggle("hide", !http);
+});
+
+function lines(value) {
+  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
+
+function parseEnv(value) {
+  const env = {};
+  lines(value).forEach((line) => {
+    const cut = line.indexOf("=");
+    if (cut > 0) env[line.slice(0, cut).trim()] = line.slice(cut + 1);
+  });
+  return env;
+}
+
+function chip(kind, name) {
+  const node = document.createElement("span");
+  node.className = "chip";
+  const label = kind === "bluetooth" ? "Bluetooth" : kind === "pc" ? "PC" : "Ligado";
+  node.innerHTML = "<b></b>";
+  node.querySelector("b").textContent = label;
+  node.append(name);
+  return node;
+}
+
+async function load() {
+  try {
+    const [health, audio, mcp] = await Promise.all([
+      fetch("/api/health").then((r) => r.json()),
+      fetch("/api/audio").then((r) => r.json()),
+      fetch("/api/mcp").then((r) => r.json()),
+    ]);
+    const turn = document.querySelector("#turn");
+    if (health.heard || health.answer) {
+      turn.textContent = (health.heard ? "Ouviu: " + health.heard + " " : "") + (health.answer ? "Respondeu: " + health.answer : "");
+    } else {
+      turn.textContent = "Estado: " + (health.line || health.state || "idle");
+    }
+    const box = document.querySelector("#audio");
+    box.replaceChildren();
+    (audio.inputs || []).forEach((item, index) => box.append(chip(item.kind, (index === 0 ? "ouve · " : "reserva · ") + item.name)));
+    (audio.outputs || []).forEach((item) => box.append(chip(item.kind, "fala · " + item.name)));
+    if (!box.childElementCount) box.append(chip("outro", "nenhum dispositivo de áudio"));
+    const hook = await fetch("/api/webhook").then((r) => r.json());
+    document.querySelector("#hook-url").value = hook.url || "";
+    document.querySelector("#hook-token").value = hook.token || "";
+    document.querySelector("#hook-auth").value = hook.authorization || "";
+    document.querySelector("#hook-urls").textContent = (hook.urls || []).join("  ·  ");
+    drawAgents(hook.agents || []);
+    const model = document.querySelector("#model");
+    const soul = health.mysoul || {};
+    model.textContent = (health.model || "modelo") + (health.atomic ? " · Atomic Chat no ar" : " · Atomic Chat parado")
+      + " · MySoul " + (soul.files || 0) + " arquivos, " + (soul.chunks || 0) + " trechos";
+    drawServers(mcp);
+  } catch (error) {
+    say("Sem resposta do gateway.");
+  }
+}
+
+function drawServers(data) {
+  const runtime = new Map((data.runtime || []).map((item) => [item.id, item]));
+  const list = document.querySelector("#list");
+  list.replaceChildren();
+  (data.servers || []).forEach((server) => {
+    const info = runtime.get(server.id) || {};
+    const article = document.createElement("article");
+    const tools = (info.tools || []).map((tool) => tool.name).join(", ");
+    article.innerHTML = '<div class="title"><strong></strong><span class="dot"></span></div><div class="tools"></div><div class="actions"></div>';
+    article.querySelector("strong").textContent = server.name;
+    const dot = article.querySelector(".dot");
+    dot.textContent = info.ok ? "ligado" : server.enabled ? "erro" : "desligado";
+    dot.classList.add(info.ok ? "on" : server.enabled ? "off" : "off");
+    article.querySelector(".tools").textContent = info.error || tools || (server.transport === "http" ? server.url : server.command);
+    const actions = article.querySelector(".actions");
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "ghost";
+    edit.textContent = "Editar";
+    edit.onclick = () => fill(server);
+    const test = document.createElement("button");
+    test.type = "button";
+    test.className = "ghost";
+    test.textContent = "Testar";
+    test.onclick = () => post("/api/mcp/test", { id: server.id }).then(() => say("Testando " + server.name));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "bad";
+    remove.textContent = "Apagar";
+    remove.onclick = () => post("/api/mcp", { op: "delete", id: server.id });
+    actions.append(edit, test, remove);
+    list.append(article);
+  });
+  if (!(data.servers || []).length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Nenhum MCP. Até lá, o assistente responde só com os arquivos do MySoul.";
+    list.append(empty);
+  }
+}
+
+function drawAgents(agents) {
+  const list = document.querySelector("#agent-list");
+  list.replaceChildren();
+  agents.forEach((agent) => {
+    const article = document.createElement("article");
+    article.innerHTML = '<div class="title"><strong></strong></div><div class="tools"></div><div class="actions"></div>';
+    article.querySelector("strong").textContent = agent.name;
+    article.querySelector(".tools").textContent = agent.url;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "bad";
+    remove.textContent = "Desligar";
+    remove.onclick = () => post("/api/webhook", { op: "delete", name: agent.name });
+    article.querySelector(".actions").append(remove);
+    list.append(article);
+  });
+}
+
+function fill(server) {
+  document.querySelector("#sid").value = server.id || "";
+  document.querySelector("#name").value = server.name || "";
+  document.querySelector("#transport").value = server.transport || "stdio";
+  document.querySelector("#command").value = server.command || "";
+  document.querySelector("#args").value = (server.args || []).join("\n");
+  document.querySelector("#url").value = server.url || "";
+  document.querySelector("#env").value = Object.entries(server.env || {}).map(([key, value]) => key + "=" + value).join("\n");
+  document.querySelector("#enabled").checked = server.enabled !== false;
+  document.querySelector("#save").textContent = "Guardar";
+  transport.dispatchEvent(new Event("change"));
+}
+
+function clearForm() {
+  document.querySelector("#form").reset();
+  document.querySelector("#sid").value = "";
+  document.querySelector("#enabled").checked = true;
+  document.querySelector("#save").textContent = "Adicionar";
+  transport.dispatchEvent(new Event("change"));
+}
+
+async function post(url, body) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) say(data.error || "Não guardou");
+  await load();
+  return data;
+}
+
+document.querySelector("#form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const server = {
+    id: document.querySelector("#sid").value,
+    name: document.querySelector("#name").value.trim(),
+    transport: transport.value,
+    command: document.querySelector("#command").value.trim(),
+    args: lines(document.querySelector("#args").value),
+    url: document.querySelector("#url").value.trim(),
+    env: parseEnv(document.querySelector("#env").value),
+    enabled: document.querySelector("#enabled").checked,
+  };
+  post("/api/mcp", { op: "save", server }).then(() => { say("Guardado"); clearForm(); });
+});
+document.querySelector("#cancel").onclick = clearForm;
+document.querySelector("#test-sound").onclick = () => post("/api/speak", {}).then(() => say("Falando nos dispositivos"));
+document.querySelector("#copy-hook").onclick = async () => {
+  const text = "URL: " + document.querySelector("#hook-url").value + "\nToken: " + document.querySelector("#hook-token").value + "\nAuthorization: " + document.querySelector("#hook-auth").value;
+  try { await navigator.clipboard.writeText(text); say("Endereço e token copiados"); }
+  catch { say("Copia da tela: o navegador bloqueou a área de transferência"); }
+};
+document.querySelector("#save-agent").onclick = () => {
+  post("/api/webhook", {
+    op: "save",
+    name: document.querySelector("#agent-name").value.trim(),
+    url: document.querySelector("#agent-url").value.trim(),
+    token: document.querySelector("#agent-token").value.trim(),
+  }).then(() => {
+    document.querySelector("#agent-name").value = "";
+    document.querySelector("#agent-url").value = "";
+    document.querySelector("#agent-token").value = "";
+    say("Agente ligado ao orquestrador");
+  });
+};
+transport.dispatchEvent(new Event("change"));
+load();
+setInterval(load, 4000);
+</script>
+</body>
+</html>
